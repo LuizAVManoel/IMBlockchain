@@ -11,7 +11,7 @@ random.seed(0)
 
 def hashMe(msg=""):
 	if type(msg)!=str:
-		msg = json.dumps(msg,sort_keys=true)
+		msg = json.dumps(msg,sort_keys=True)
 
 	if sys.version_info.major == 2:
 		return unicode(hashlib.sha256(msg).hexdigest(),'utf-8')
@@ -29,8 +29,7 @@ def makeTransaction(maxvalue=3):
 
 	return {u'Alice':alicePays,u'Bob':bobPays}
 
-txnBuffer = [makeTransaction(7) for i in range(30)]
-print(txnBuffer)
+txnBuffer = [makeTransaction() for i in range(30)]
 
 def updateState(txn,state): 
 # Inputs: txn, state: dictionaries keyed with account names, holding numeric values for transfer amount (txn) or account balance (state)
@@ -67,7 +66,7 @@ def isValidTxn(txn,state):
 state = {u'Alice':50, u'Bob':50}  # Define the initial state
 genesisBlockTxns = [state]
 genesisBlockContents = {u'blockNumber':0,u'parentHash':None,u'txnCount':1,u'txns':genesisBlockTxns}
-genesisHash = hashMe( genesisBlockContents )
+genesisHash = hashMe(genesisBlockContents)
 genesisBlock = {u'hash':genesisHash,u'contents':genesisBlockContents}
 genesisBlockStr = json.dumps(genesisBlock, sort_keys=True)
 
@@ -85,3 +84,28 @@ def makeBlock(txns,chain):
     block = {u'hash':blockHash,u'contents':blockContents}
     
     return block
+
+#Arbitrary number of transactions per block-
+blockSizeLimit = 5 #this is chosen by the block miner, and can vary between blocks
+
+while len(txnBuffer) > 0:
+    bufferStartSize = len(txnBuffer)
+    
+    txnList = []
+    while (len(txnBuffer) > 0) & (len(txnList) < blockSizeLimit):
+        newTxn = txnBuffer.pop()
+        validTxn = isValidTxn(newTxn,state) # This will return False if txn is invalid
+        
+        if validTxn:           # If we got a valid state, not 'False'
+            txnList.append(newTxn)
+            state = updateState(newTxn,state)
+        else:
+            print("ignored transaction")
+            sys.stdout.flush()
+            continue  # This was an invalid transaction; ignore it and move on
+        
+    ## Make a block
+    myBlock = makeBlock(txnList,chain)
+    chain.append(myBlock)
+
+print(state)
